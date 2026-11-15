@@ -103,6 +103,12 @@ py -m venv .venv
 .venv\Scripts\python.exe calibration_free.py
 ```
 
+Run the exploratory cross-site alignment and confidence-stopping extension:
+
+```bash
+.venv\Scripts\python.exe adaptive_study.py --data-dir data --thresholds 1.0 --min-sequences 2
+```
+
 ```bash
 .venv\Scripts\python.exe render_results.py
 ```
@@ -122,6 +128,7 @@ To verify that the checked-in report still matches the JSON (the same check runs
 | File | What it does |
 |---|---|
 | `calibration_free.py` | Loads the three datasets, runs every method as an online replay, writes `results/calibration_free_results.json`. |
+| `adaptive_study.py` | Exploratory CORAL seed alignment and confidence-based stopping; see [ADAPTIVE_STUDY.md](ADAPTIVE_STUDY.md). |
 | `render_results.py` | Turns that JSON into [RESULTS.md](RESULTS.md), or checks it with `--check`. |
 | `tests/` | Unit tests on synthetic spellers; no download needed. |
 | `download_*.py` | Fetch the three public datasets. |
