@@ -143,3 +143,51 @@ the new user's own epochs seen so far. This needs no labels and no future data. 
 variant, including the same-dataset seed, so the `rome_als` figure can differ slightly from the first run
 (86.4%), which used raw units. A first launch of the addendum-2 run was stopped before finishing and its
 output was not looked at.
+
+## Addendum 3 (15 Nov 2026): why seeds fail across setups, and a timing correction
+
+Written before `latency_study.py` produced any accuracy figure.
+
+**What was looked at first (descriptive, uses labels of every group).** The average target-minus-non-target
+response of each dataset was compared. At zero time shift the Rome healthy and Rome ALS responses have cosine
+similarity 0.46, rising to 0.84 when the ALS response is allowed to be 100 ms later. The ETSU ALS response is
+*negatively* related to the Rome ALS one at zero shift (-0.28) and becomes positive only when shifted by 200 ms
+or more: its peak over Pz/Cz sits around 200-300 ms after the flash marker, against about 500 ms in Rome ALS.
+So a seed borrowed from another setup has the right shape at the wrong time. No accuracy with any shifted seed
+had been computed when this was written.
+
+**Method to be tested: latency-searched seed.** The borrowed seed is tried at 13 time shifts (-300 to +300 ms
+in 50 ms steps, zero-padded). For each letter and each shift, seeded UMM is evaluated and its confidence
+(UMM Eq. 5, capped at 1) is added to that shift's running total. The shift with the highest total so far,
+including the current letter, makes the decision. No labels and no future data are used. Everything else
+(seed weight 5, unit-free seed, `binned` pipeline) is unchanged.
+
+**Tests, in order of importance**
+
+1. *New-clinic scenario (primary for this addendum).* Each of the 19 people with ALS is seeded only from the
+   **other** site's ALS participants. `latency_seeded` vs `umm_memory`, all letters: exact sign-flip test,
+   alpha 0.05, with a participant-bootstrap interval. Also reported against the raw cross-site seed.
+2. *Closeness to a local seed.* Counts as closing the gap if the cross-site `latency_seeded` participant mean
+   is within 5 points of the local `seeded_umm` in each ALS dataset.
+3. *No harm locally.* With a local seed, `latency_seeded` must be no more than 3 points below `seeded_umm` in
+   each of the three datasets.
+4. *Healthy seed for ALS users.* Rome ALS seeded from Rome healthy with latency search, against the same two
+   references.
+
+**Baseline fidelity (descriptive).** On Rome ALS under the `authors` pipeline, every UMM variant described in
+the paper is reported: covariance from the current letter or pooled over letters; means from the current
+letter, optimistic memory or confidence-weighted memory; epochs centred per letter (as in the authors' demo)
+or not. The published 77.86% is compared with the best and the spread of this grid. This is a check on the
+reimplementation, not a tuning step: the main study keeps `umm_memory` as defined in addendum 1.
+
+**Limits.** The latency search is a new, untuned heuristic chosen after looking at labelled average
+responses, so it must be confirmed on data not used here. Shifts are whole 50 ms bins.
+
+**Post-hoc check added after the addendum-3 results were seen (15 Nov 2026).** The latency search failed
+(it picked inconsistent shifts and scored below the raw seed). That leaves the diagnosis itself untested: is
+timing really why a borrowed seed fails? To test only that, `fixed_shift[<other>]` shifts the borrowed seed by
+one number per test participant: the shift that best matches the borrowed average response to the average
+response of the *other* participants at the test participant's own site (their labels are used; the test
+participant's are not). This is not a usable calibration-free method, because a site that has labelled users
+could seed from them directly. It is reported only as evidence for or against the timing explanation: it
+supports it if the shifted borrowed seed recovers most of the gap to the local seed.

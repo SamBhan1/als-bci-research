@@ -45,7 +45,9 @@ Brackets are 95% intervals over participants. Full tables: [RESULTS.md](RESULTS.
 6. **The seed does not travel between setups. This is the main limit.** Seeding Rome's ALS users from Rome's
    healthy users gave 73.9%, well short of the 86.8% from fellow patients. Seeding the second site's users
    from Rome's data gave 30.1%, far *worse* than no seed at all (62.1%). A new clinic could not simply reuse
-   another lab's seed.
+   another lab's seed. Two attempts to repair this failed: CORAL alignment helped a little
+   ([ADAPTIVE_STUDY.md](ADAPTIVE_STUDY.md)), and a pre-specified timing correction made things significantly
+   worse ([LATENCY_STUDY.md](LATENCY_STUDY.md)).
 7. **It needs enough flashes.** With 3 or fewer flash sequences per letter it is worse than `transfer`; from
    5 sequences up it matches the calibrated decoder (Rome ALS data).
 
@@ -55,7 +57,8 @@ Brackets are 95% intervals over participants. Full tables: [RESULTS.md](RESULTS.
   available from them on request and a patent is pending on UMM-based applications). With my preprocessing
   the reimplementation scores 59.6% on the Rome ALS data; with the settings from the authors' public demo it
   scores 69.6%; they report 77.86%. The target set in advance was to land within 5 points, and it did not. So
-  the baseline here is weaker than the published one. Seeded UMM scores 86.8% and 87.9% on that dataset under
+  the baseline here is weaker than the published one. Trying every variant the paper describes did not close
+  the gap: the one used here is the strongest of them ([LATENCY_STUDY.md](LATENCY_STUDY.md)). Seeded UMM scores 86.8% and 87.9% on that dataset under
   the two pipelines, above the published figure too, but that comparison is across different code and
   preprocessing and is not a controlled one.
 - **One participant at the second site is at about 10% under every calibration-free method**, and the
@@ -73,6 +76,8 @@ Brackets are 95% intervals over participants. Full tables: [RESULTS.md](RESULTS.
 | Replicates at the second ALS site (higher mean than UMM with memory) | **Met** (72.4% vs 62.1%) |
 | No more than 3 points worse than UMM with memory on healthy users | **Met** (2.8 points better) |
 | Seed from another dataset beats UMM with memory and is within 5 points of the local seed | **Not met** in any of the three cases |
+| Timing-corrected seed from the other ALS site beats UMM with memory (19 people, p < 0.05) | **Not met**: 20.5 points *worse* (p = 0.014) |
+| Timing correction costs no more than 3 points with a local seed | **Not met** (7.8 to 32.7 points worse) |
 
 ## Run it
 
@@ -109,6 +114,12 @@ Run the exploratory cross-site alignment and confidence-stopping extension:
 .venv\Scripts\python.exe adaptive_study.py --data-dir data --thresholds 1.0 --min-sequences 2
 ```
 
+Run the timing-correction study and the UMM fidelity grid:
+
+```bash
+.venv\Scripts\python.exe latency_study.py
+```
+
 ```bash
 .venv\Scripts\python.exe render_results.py
 ```
@@ -129,6 +140,8 @@ To verify that the checked-in report still matches the JSON (the same check runs
 |---|---|
 | `calibration_free.py` | Loads the three datasets, runs every method as an online replay, writes `results/calibration_free_results.json`. |
 | `adaptive_study.py` | Exploratory CORAL seed alignment and confidence-based stopping; see [ADAPTIVE_STUDY.md](ADAPTIVE_STUDY.md). |
+| `latency_study.py` | Pre-specified timing correction for borrowed seeds (failed) and a UMM fidelity grid; see [LATENCY_STUDY.md](LATENCY_STUDY.md). |
+| `docs/umm_code_request.md` | Draft email asking the UMM authors for their implementation. Not sent. |
 | `render_results.py` | Turns that JSON into [RESULTS.md](RESULTS.md), or checks it with `--check`. |
 | `tests/` | Unit tests on synthetic spellers; no download needed. |
 | `download_*.py` | Fetch the three public datasets. |
@@ -150,8 +163,9 @@ All are 6x6 spellers at 256 Hz, cut down to the eight electrodes they share.
 
 - The authors' own UMM code, to replace the reimplemented baseline.
 - A live test, where the user sees feedback and the early, less accurate letters matter.
-- Finding out *why* the seed fails across setups (flash timing, amplifier filters, flashing pattern) and
-  whether aligning the recordings first repairs it.
+- Finding out *why* the seed fails across setups. A plain time shift is ruled out and CORAL is not enough;
+  the shape of the response relative to each setup's background EEG is the next thing to examine.
+- How few local, labelled earlier users are enough to build a working seed for a new setup.
 - More people with ALS; bigP3BCI has three further studies that include them.
 
 Code: MIT ([LICENSE](LICENSE)). Data licences differ by dataset; see [DATA_NOTICE.md](DATA_NOTICE.md).

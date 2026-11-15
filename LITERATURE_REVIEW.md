@@ -76,3 +76,10 @@ people with ALS.
   seed fails when it comes from a different recording setup. Cross-setup transfer for ERP spellers is usually
   handled by aligning recordings first (for example Riemannian re-centring; see the xDAWN/Riemannian
   reference above); whether that repairs the seed was not tested here.
+
+## After the timing study (added 15 Nov 2026)
+
+- P300 latency is known to be longer and more variable in people with ALS than in healthy users, and latency
+  jitter lowers speller accuracy (Arico et al., 2014, above). The three datasets here do peak at different
+  times. Shifting a borrowed seed to line up the peaks nevertheless made it worse in every case, so the
+  cross-setup failure is not explained by delay alone (LATENCY_STUDY.md).
