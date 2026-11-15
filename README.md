@@ -48,6 +48,15 @@ Download the independent ALS-only external-validation dataset and evaluate cross
 .venv\Scripts\python.exe external_validation.py --train-dir data\raw --test-dir data\nm000169 --repeats 10
 ```
 
+For the actual spelling-level metric, download the source-format stimulus codes and run:
+
+```cmd
+.venv\Scripts\python.exe download_nemar_source.py
+.venv\Scripts\python.exe source_character_eval.py --source-dir data\nm000169\sourcedata --training-source calibration --calibration-fraction 0.6 --repeats 10 --model xdawn_lda
+```
+
+This evaluates exact row/column-pair selection per character using the source metadata. It is the appropriate communication-level metric; binary target detection should not be presented as spelling accuracy.
+
 Use `--model logistic` to compare the unaligned baseline. The default `riemann` model uses xDAWN covariance alignment before tangent-space classification.
 
 To measure a realistic short calibration phase, add for example `--calibration-fraction 0.2`. That uses the first 20% of each NEMAR participant's labeled epochs for adaptation and evaluates only on the remaining 80%; it is not zero-shot performance.
@@ -59,8 +68,9 @@ Observed results on the downloaded data:
 - NEMAR ALS external test with 60% labeled calibration: participant-mean balanced accuracy 0.845 (95% bootstrap CI 0.811--0.878) and ROC-AUC 0.933 (95% CI 0.896--0.965).
 - NEMAR ALS external test with 80% labeled calibration: participant-mean balanced accuracy 0.871 (95% bootstrap CI 0.845--0.903).
 - NEMAR ALS external test with 90% labeled calibration: participant-mean balanced accuracy 0.882 (95% bootstrap CI 0.818--0.939), but only 10% of each participant remained for evaluation.
+- Corrected source-format spelling evaluation: xDAWN + shrinkage LDA reached 0.844 at 80% calibration and 0.906 at 90% calibration; the latter used only 32 held-out characters and is exploratory.
 
-The calibration result is the closest to the current 85% target, but it requires a large labeled calibration portion and must not be described as zero-shot performance. The 90% calibration result is not a defensible 90% headline because the independent test portion is too small.
+The 80% calibration result is the strongest primary spelling result, but it still requires substantial labeled calibration. The 90% result crosses 90% on the small held-out character set, but is exploratory and must not be presented as a general 90% claim.
 
 The NEMAR event table does not include the stimulus identity/order needed to reconstruct row/column characters, so `character_validation.py` is retained as an exploratory diagnostic only and is not a valid communication-accuracy result. A true character-level study requires a dataset that preserves stimulus codes.
 

@@ -39,7 +39,7 @@ An EEGNet comparison is a future extension after the dataset includes enough ind
 
 ## Calibration curve
 
-Run 0%, 20%, 60%, and 80% labeled calibration as the primary curve. A 90% condition is exploratory only because it leaves too little independent evaluation data. Calibration boundaries must be aligned to participant recording order and must not mix future evaluation epochs into calibration examples.
+Run 0%, 20%, 60%, and 80% labeled calibration as the primary curve. A 90% condition is exploratory only because it leaves too little independent evaluation data. Calibration boundaries must be aligned to participant recording order and must not mix future evaluation epochs into calibration examples. At the spelling level, average repeated flashes for each character/code before fitting or evaluating; do not average arbitrary same-class epochs across characters.
 
 ## Claim boundaries
 

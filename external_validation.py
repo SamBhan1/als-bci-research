@@ -134,6 +134,12 @@ def main() -> None:
     print(f"External balanced accuracy: {balanced_accuracy_score(test.y, pred):.3f}")
     print(f"External macro F1: {f1_score(test.y, pred, average='macro'):.3f}")
     print(f"External ROC-AUC: {roc_auc_score(test.y, proba):.3f}")
+    confidence = np.abs(proba - 0.5)
+    print("Selective evaluation (retain the most confident decisions)")
+    for target_coverage in (0.5, 0.8, 0.9):
+        n_keep = max(1, int(len(confidence) * target_coverage))
+        selected = np.argsort(confidence)[-n_keep:]
+        print(f"  coverage={n_keep / len(confidence):.3f}, balanced_accuracy={balanced_accuracy_score(test.y[selected], pred[selected]):.3f}")
     rows = []
     for subject in np.unique(test.subject):
         mask = test.subject == subject
