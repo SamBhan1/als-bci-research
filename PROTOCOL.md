@@ -191,3 +191,47 @@ response of the *other* participants at the test participant's own site (their l
 participant's are not). This is not a usable calibration-free method, because a site that has labelled users
 could seed from them directly. It is reported only as evidence for or against the timing explanation: it
 supports it if the shifted borrowed seed recovers most of the gap to the local seed.
+
+## Addendum 4 (15 Nov 2026): 27 new people with ALS, how small a seed can be, and what makes a seed travel
+
+Written while the new recordings were still downloading. None of them had been opened.
+
+**New data.** bigP3BCI Study B (19 people, first session) and Study N (8 people, one session with a wet cap
+and one with a dry cap). File headers mark every participant as having ALS. Same lab as Study L, 6x6
+checkerboard speller. Names in the code: `etsu_b`, `etsu_n_wet`, `etsu_n_dry`. Same eight channels, `binned`
+pipeline, methods and seed weight as before. If a study lacks any of the eight channels it is left out and
+that is reported. Supervised reference: first 12 letters, as for `etsu_als`.
+
+**A. Confirmation on people not used so far (primary).** The 27 new people (`etsu_b` + `etsu_n_wet`):
+`seeded_umm` with a seed from the other participants of their own study vs `umm_memory`, all letters.
+Two-sided sign-flip test on participant differences, alpha 0.05 (1,000,000 random sign assignments, fixed
+random seed, because 2^27 exact assignments are too many), with a participant-bootstrap interval. This is a
+fresh test of the main claim on data that played no part in developing the method. The pooled figure for all
+46 people with ALS is reported next to it.
+
+**B. How few earlier users make a working seed.** In `etsu_b`, each participant is seeded from k other
+participants chosen at random, k = 1, 2, 3, 5, 8, 12, 18 (10 random draws per participant for k < 18, fixed
+random seed). "Enough" is defined now as the smallest k whose participant-mean accuracy is above `umm_memory`
+and within 3 points of the 18-donor seed.
+
+**C. Same lab, different study.** `etsu_b`, `etsu_als` (Study L) and `etsu_n_wet` seeded from each other.
+A seed counts as travelling if it beats `umm_memory` and is within 5 points of the local seed (the rule used
+before). If seeds travel between studies of one lab but not between labs, the obstacle is the setup and not
+the people.
+
+**D. Wet and dry caps (descriptive).** The same eight people recorded with both. Each cap condition is seeded
+from the other condition, never using the test person's own other session.
+
+**E. What makes a seed travel.** For every ordered pair of the six datasets (source, target), two numbers are
+computed from labelled averages: the plain cosine similarity of the average target-minus-non-target
+responses, and the same similarity measured the way the decoder sees it, with the target dataset's background
+covariance divided out (`a' S^-1 b / sqrt(a' S^-1 a * b' S^-1 b)`, S the average of the target participants'
+unit-scaled Ledoit-Wolf covariances). Each is compared, across the ordered pairs, with how much the borrowed
+seed helps (`seeded_umm[source]` minus `umm_memory`, participant mean). The explanation "a seed travels to
+the extent that its response looks alike once the target's background EEG is accounted for" is counted as
+supported if the Spearman correlation for the background-adjusted similarity is at least 0.6 and higher than
+for the plain cosine. Pairs between the wet and dry sessions of the same people are excluded from E.
+
+**Limits known in advance.** All new data come from one lab. Studies B, L and N may share participants
+across studies; the headers do not allow checking, so cross-study seeding in C may be optimistic. Still
+offline replay.
