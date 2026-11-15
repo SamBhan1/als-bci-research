@@ -12,7 +12,7 @@ The project is not a diagnostic or clinical tool. It is a reproducible benchmark
 
 ## Run
 
-From `C:\Users\sara\ALS` in Command Prompt:
+From the project folder in Command Prompt:
 
 ```powershell
 .venv\Scripts\python.exe als_bci_baseline\experiment.py
