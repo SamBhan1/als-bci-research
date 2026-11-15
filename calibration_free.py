@@ -37,6 +37,7 @@ from sklearn.covariance import ledoit_wolf
 FS = 256
 CHANNELS = ["Fz", "Cz", "Pz", "Oz", "P3", "P4", "PO7", "PO8"]
 N_SYMBOLS = 36
+RESULT_SCHEMA_VERSION = 1
 SEED_WEIGHT = 5.0                       # other people count as much as five confident letters (fixed in advance)
 CALIBRATION = {"rome_als": 15, "rome_healthy": 6, "etsu_als": 12}
 SEQUENCES = (1, 2, 3, 5, 7, 10)         # row/column sweep on rome_als (12 flashes per sequence)
@@ -54,16 +55,41 @@ class Participant:
     def first(self, n_flashes: int | None) -> "Participant":
         if n_flashes is None:
             return self
+        if n_flashes <= 0:
+            raise ValueError("n_flashes must be positive or None")
         return Participant(self.name, [x[:n_flashes] for x in self.x], [m[:n_flashes] for m in self.lit], self.target)
+
+
+def validate_participant(p: Participant) -> None:
+    """Fail early on malformed participant data instead of producing plausible-looking scores."""
+    if not p.name:
+        raise ValueError("participant name is empty")
+    if not (len(p.x) == len(p.lit) == len(p.target)) or not p.x:
+        raise ValueError(f"{p.name}: x, lit and target must have the same non-zero number of letters")
+    for letter, (x, lit, target) in enumerate(zip(p.x, p.lit, p.target)):
+        if x.ndim != 2 or lit.ndim != 2:
+            raise ValueError(f"{p.name} letter {letter}: x and lit must be matrices")
+        if x.shape[0] != lit.shape[0] or lit.shape[1] != N_SYMBOLS or x.shape[0] == 0:
+            raise ValueError(f"{p.name} letter {letter}: flashes and symbol dimensions do not agree")
+        if not np.isfinite(x).all():
+            raise ValueError(f"{p.name} letter {letter}: non-finite EEG feature")
+        if not 0 <= int(target) < N_SYMBOLS or not lit[:, int(target)].any():
+            raise ValueError(f"{p.name} letter {letter}: invalid or unobserved target symbol")
 
 
 # ---------------------------------------------------------------- features
 
 def featurise(signal: np.ndarray, onsets: np.ndarray, pipeline: str) -> np.ndarray:
     """signal: samples x 8 channels at 256 Hz. Returns flashes x features."""
+    signal = np.asarray(signal, dtype=float)
+    onsets = np.asarray(onsets, dtype=int).reshape(-1)
+    if signal.ndim != 2 or signal.shape[0] == 0 or signal.shape[1] == 0:
+        raise ValueError("signal must be a non-empty samples x channels matrix")
     if pipeline == "binned":      # fixed in the first protocol addendum
         clean = sosfiltfilt(butter(4, [0.5, 16.0], btype="band", fs=FS, output="sos"), signal, axis=0)
         width, bins, base = int(0.05 * FS), 16, int(0.1 * FS)
+        if np.any(onsets < base) or np.any(onsets + bins * width > len(signal)):
+            raise ValueError("binned epoch would extend outside the recording")
         out = np.empty((len(onsets), bins * signal.shape[1]))
         for i, onset in enumerate(onsets):
             epoch = clean[onset: onset + bins * width] - clean[onset - base: onset].mean(axis=0)
@@ -73,12 +99,17 @@ def featurise(signal: np.ndarray, onsets: np.ndarray, pipeline: str) -> np.ndarr
         clean = sosfiltfilt(butter(4, [0.5, 8.0], btype="band", fs=FS, output="sos"), signal, axis=0)
         slow = resample_poly(clean, 5, 32, axis=0)                     # 256 Hz -> 40 Hz
         starts = np.round(onsets * 40 / FS).astype(int) + 2            # 0.05 s
+        if np.any(starts < 0) or np.any(starts + 27 > len(slow)):
+            raise ValueError("authors' epoch would extend outside the resampled recording")
         return np.stack([slow[s: s + 27].ravel() for s in starts])    # up to 0.70 s inclusive
     raise ValueError(pipeline)
 
 
 def rowcol_lit(codes: np.ndarray) -> np.ndarray:
     """Row/column codes (1-6 rows, 7-12 columns) -> flashes x 36 cell membership."""
+    codes = np.asarray(codes, dtype=int).reshape(-1)
+    if np.any((codes < 1) | (codes > 12)):
+        raise ValueError("row/column stimulus codes must be in 1..12")
     lit = np.zeros((len(codes), N_SYMBOLS), dtype=bool)
     for i, code in enumerate(codes):
         if code <= 6:
@@ -101,10 +132,14 @@ def _load_rome_session(session, pipeline: str) -> tuple[list, list, list]:
     onsets = np.flatnonzero((stimulus[1:] != 0) & (stimulus[:-1] == 0)) + 1
     starts = np.asarray(session.trial).astype(int) - 1                 # MATLAB indices are 1-based
     letter_of = np.searchsorted(starts, onsets, side="right") - 1
+    if np.any(letter_of < 0):
+        raise ValueError("stimulus onset precedes the first trial boundary")
     features = featurise(signal, onsets, pipeline)
     xs, lits, targets = [], [], []
     for letter in range(len(starts)):
         pick = letter_of == letter
+        if not pick.any():
+            raise ValueError(f"letter {letter}: no stimulus flashes found")
         lit = rowcol_lit(stimulus[onsets[pick]])
         is_target = labels[onsets[pick]] == 2
         cell = np.flatnonzero(lit[is_target].all(axis=0))             # the one cell in every target flash
@@ -120,7 +155,9 @@ def load_rome(path: Path, pipeline: str) -> Participant:
     for session in np.atleast_1d(data):
         x, lit, target = _load_rome_session(session, pipeline)
         xs += x; lits += lit; targets += target
-    return Participant(path.stem, xs, lits, np.array(targets))
+    participant = Participant(path.stem, xs, lits, np.array(targets))
+    validate_participant(participant)
+    return participant
 
 
 def load_etsu(paths: list[Path], pipeline: str) -> Participant:
@@ -145,7 +182,9 @@ def load_etsu(paths: list[Path], pipeline: str) -> Participant:
             if target < 0 or not (lit[:, target] == (kind[o] > 0)).all():
                 raise ValueError(f"{path.name}: CurrentTarget disagrees with StimulusType")
             xs.append(features[a:b]); lits.append(lit); targets.append(target)
-    return Participant(paths[0].name[:4], xs, lits, np.array(targets))
+    participant = Participant(paths[0].name[:4], xs, lits, np.array(targets))
+    validate_participant(participant)
+    return participant
 
 
 def load_datasets(data_dir: Path, pipeline: str) -> dict[str, list[Participant]]:
@@ -161,6 +200,10 @@ def load_datasets(data_dir: Path, pipeline: str) -> dict[str, list[Participant]]
     for name, people in out.items():
         if len(people) != expected[name]:
             raise SystemExit(f"{name}: expected {expected[name]} participants under {data_dir}, found {len(people)}. See README.")
+        if len({p.name for p in people}) != len(people):
+            raise ValueError(f"{name}: participant identifiers are not unique")
+        for participant in people:
+            validate_participant(participant)
     return out
 
 
@@ -228,8 +271,10 @@ def run_umm(p: Participant, *, memory: bool, seed: tuple[np.ndarray, np.ndarray]
     correct = np.zeros(len(p.x), dtype=bool)
     seed_weight = SEED_WEIGHT if seed is not None else 0.0
     sum_t, sum_n, weight = 0.0, 0.0, 0.0
+    seen_chunks = []
     for letter, (x, lit) in enumerate(zip(p.x, p.lit)):
-        seen = np.concatenate(p.x[: letter + 1])
+        seen_chunks.append(x)
+        seen = np.concatenate(seen_chunks) if memory else x
         inverse = shrunk_inverse(seen if memory else x)
         mu_t, mu_n = hypothesis_means(x, lit)
         if memory and weight + seed_weight > 0:
@@ -283,6 +328,9 @@ def per_participant(correct: list[np.ndarray], block: str, calibration: int) -> 
 
 
 def bootstrap_mean(values: np.ndarray, seed: int = 0, resamples: int = 10_000) -> tuple[float, float]:
+    values = np.asarray(values, dtype=float)
+    if values.ndim != 1 or len(values) == 0 or not np.isfinite(values).all():
+        raise ValueError("bootstrap values must be a non-empty finite vector")
     rng = np.random.default_rng(seed)
     draws = rng.choice(values, size=(resamples, len(values)), replace=True).mean(axis=1)
     return float(np.percentile(draws, 2.5)), float(np.percentile(draws, 97.5))
@@ -290,6 +338,9 @@ def bootstrap_mean(values: np.ndarray, seed: int = 0, resamples: int = 10_000) -
 
 def sign_flip_p(differences: np.ndarray) -> float:
     """Exact two-sided sign-flip permutation test on paired participant differences (all 2^n assignments)."""
+    differences = np.asarray(differences, dtype=float)
+    if differences.ndim != 1 or not np.isfinite(differences).all():
+        raise ValueError("sign-flip differences must be a finite vector")
     d = differences[differences != 0]
     if len(d) == 0:
         return 1.0
@@ -299,6 +350,9 @@ def sign_flip_p(differences: np.ndarray) -> float:
 
 
 def summary(values: np.ndarray) -> dict:
+    values = np.asarray(values, dtype=float)
+    if values.ndim != 1 or len(values) == 0 or not np.isfinite(values).all():
+        raise ValueError("summary values must be a non-empty finite vector")
     low, high = bootstrap_mean(values)
     return {"mean": round(float(values.mean()), 4), "ci95": [round(low, 4), round(high, 4)],
             "min": round(float(values.min()), 4), "n": int(len(values)),
@@ -306,6 +360,9 @@ def summary(values: np.ndarray) -> dict:
 
 
 def paired(a: np.ndarray, b: np.ndarray) -> dict:
+    a, b = np.asarray(a, dtype=float), np.asarray(b, dtype=float)
+    if a.ndim != 1 or b.ndim != 1 or a.shape != b.shape or not np.isfinite(a).all() or not np.isfinite(b).all():
+        raise ValueError("paired inputs must be same-shaped finite vectors")
     d = a - b
     low, high = bootstrap_mean(d)
     return {"mean_difference": round(float(d.mean()), 4), "ci95": [round(low, 4), round(high, 4)], "n": int(len(d)),
@@ -319,7 +376,7 @@ def external_for(name: str, datasets: dict[str, list[Participant]]) -> dict[str,
 
 
 def analyse(datasets: dict[str, list[Participant]], *, sweep: bool) -> dict:
-    result: dict = {"datasets": {}}
+    result: dict = {"schema_version": RESULT_SCHEMA_VERSION, "chance_accuracy": 1 / N_SYMBOLS, "datasets": {}}
     scores: dict[str, dict[str, dict[str, np.ndarray]]] = {}
     for name, people in datasets.items():
         calibration = CALIBRATION[name]
@@ -363,7 +420,9 @@ def main() -> None:
     parser.add_argument("--data-dir", type=Path, default=Path(__file__).parent / "data")
     parser.add_argument("--output", type=Path, default=Path(__file__).parent / "results" / "calibration_free_results.json")
     args = parser.parse_args()
-    results = {"seed_weight": SEED_WEIGHT, "channels": CHANNELS, "pipelines": {}}
+    results = {"schema_version": RESULT_SCHEMA_VERSION, "seed_weight": SEED_WEIGHT, "channels": CHANNELS,
+               "n_symbols": N_SYMBOLS, "chance_accuracy": 1 / N_SYMBOLS, "calibration_letters": CALIBRATION,
+               "pipelines": {}}
     for pipeline in PIPELINES:
         print(f"pipeline: {pipeline}")
         results["pipelines"][pipeline] = analyse(load_datasets(args.data_dir, pipeline), sweep=pipeline == "binned")

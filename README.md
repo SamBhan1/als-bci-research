@@ -107,6 +107,12 @@ py -m venv .venv
 .venv\Scripts\python.exe render_results.py
 ```
 
+To verify that the checked-in report still matches the JSON (the same check runs in CI):
+
+```bash
+.venv\Scripts\python.exe render_results.py --check
+```
+
 ```bash
 .venv\Scripts\python.exe -m pytest -q
 ```
@@ -116,7 +122,7 @@ py -m venv .venv
 | File | What it does |
 |---|---|
 | `calibration_free.py` | Loads the three datasets, runs every method as an online replay, writes `results/calibration_free_results.json`. |
-| `render_results.py` | Turns that JSON into [RESULTS.md](RESULTS.md). |
+| `render_results.py` | Turns that JSON into [RESULTS.md](RESULTS.md), or checks it with `--check`. |
 | `tests/` | Unit tests on synthetic spellers; no download needed. |
 | `download_*.py` | Fetch the three public datasets. |
 | [PROTOCOL.md](PROTOCOL.md) | What was fixed in advance, and deviations. |

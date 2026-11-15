@@ -35,6 +35,16 @@ def test_rowcol_lit_marks_one_row_or_one_column():
     assert (lit[0] & lit[2]).sum() == 1                      # a row and a column share exactly one cell
 
 
+def test_rowcol_lit_rejects_invalid_stimulus_codes():
+    for bad in (0, 13):
+        try:
+            cf.rowcol_lit(np.array([bad]))
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("invalid row/column code was accepted")
+
+
 def test_hypothesis_means_match_a_direct_loop():
     rng = np.random.default_rng(0)
     x, lit = rng.normal(size=(120, 5)), cf.rowcol_lit(np.tile(np.arange(1, 13), 10))
@@ -112,3 +122,24 @@ def test_paired_and_summary_report_participant_level_numbers():
     assert np.isclose(result["mean_difference"], 0.2) and result["better_same_worse"] == [2, 1, 1] and result["n"] == 4
     s = cf.summary(a)
     assert s["mean"] == 0.75 and s["min"] == 0.6 and s["ci95"][0] <= 0.75 <= s["ci95"][1]
+
+
+def test_validate_participant_catches_shape_and_nonfinite_errors():
+    p = synthetic("valid", 4)
+    cf.validate_participant(p)
+    malformed = cf.Participant(p.name, [p.x[0].copy()], [p.lit[0][:, :-1]], p.target[:1])
+    try:
+        cf.validate_participant(malformed)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("malformed participant was accepted")
+    nonfinite = p.x[0].copy()
+    nonfinite[0, 0] = np.nan
+    malformed = cf.Participant(p.name, [nonfinite] + p.x[1:], p.lit, p.target)
+    try:
+        cf.validate_participant(malformed)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("non-finite participant was accepted")

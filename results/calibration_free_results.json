@@ -1,4 +1,5 @@
 {
+ "schema_version": 1,
  "seed_weight": 5.0,
  "channels": [
   "Fz",
@@ -10,8 +11,17 @@
   "PO7",
   "PO8"
  ],
+ "n_symbols": 36,
+ "chance_accuracy": 0.027777777777777776,
+ "calibration_letters": {
+  "rome_als": 15,
+  "rome_healthy": 6,
+  "etsu_als": 12
+ },
  "pipelines": {
   "binned": {
+   "schema_version": 1,
+   "chance_accuracy": 0.027777777777777776,
    "datasets": {
     "rome_als": {
      "participants": [
@@ -1823,6 +1833,8 @@
    }
   },
   "authors": {
+   "schema_version": 1,
+   "chance_accuracy": 0.027777777777777776,
    "datasets": {
     "rome_als": {
      "participants": [
