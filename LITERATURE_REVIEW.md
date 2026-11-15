@@ -61,3 +61,18 @@ calibration-free spelling on ALS data against a calibrated baseline letter by le
 other patients' data repairs UMM's row/column failure. `calibration_free.py` does both. The idea of seeding
 from other users is Kindermans et al.'s; what is new here is applying it to UMM's memory and measuring it on
 people with ALS.
+
+## After the extended study (added 15 Nov 2026)
+
+- The UMM authors' public repository contains the preprocessing and the replay loop but not the algorithm
+  file, which is available on request. The extended study therefore copies their preprocessing settings
+  (0.5-8 Hz, 40 Hz, 0.05-0.7 s) and keeps a reimplemented decision rule.
+- **Arico et al. (2014)** recorded BNCI 2014-009: ten healthy users on the same row/column speller in the
+  same lab as the ALS dataset. https://doi.org/10.1088/1741-2560/11/3/035008
+- **Mainsah et al. (2025), bigP3BCI**: Study L holds eleven people with ALS on a checkerboard speller recorded
+  at a different site. Checkerboard flashing (Townsend et al., 2010) lights scattered groups of cells instead
+  of whole rows and columns. https://doi.org/10.13026/0byy-ry86
+- What the extended study adds to the gap above: the seeding effect holds across two ALS cohorts, and the
+  seed fails when it comes from a different recording setup. Cross-setup transfer for ERP spellers is usually
+  handled by aligning recordings first (for example Riemannian re-centring; see the xDAWN/Riemannian
+  reference above); whether that repairs the seed was not tested here.

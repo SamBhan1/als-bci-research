@@ -83,3 +83,63 @@ if plain `transfer` does as well as `seeded_umm`, which would mean the UMM part 
 **Limits known in advance.** Eight participants. Offline simulation of online use. The reimplementation of
 UMM follows the paper's equations but is not the authors' code or preprocessing, so it need not reproduce
 77.86% exactly. The seed comes from the same recording setup and site; transfer across hardware is untested.
+
+## Addendum 2 (15 Nov 2026): replication, authors' preprocessing, seeds from elsewhere
+
+Written after the first calibration-free run (addendum above) and before any of the analyses below were run.
+The first run had three weaknesses: eight participants, a UMM reimplementation that scored below the
+published figure, and a seed taken from the same lab and setup. This addendum fixes what will be tested.
+
+**Datasets** (all 256 Hz, restricted to the same eight channels Fz, Cz, Pz, Oz, P3, P4, PO7, PO8; 6x6 matrix):
+
+| Name | Source | People | Paradigm | Letters each | Flashes per letter |
+|---|---|---|---|---|---|
+| `rome_als` | BNCI 2014-008 | 8 with ALS | row/column | 35 | 120 |
+| `rome_healthy` | BNCI 2014-009 | 10 healthy | row/column | 18 | 96 |
+| `etsu_als` | bigP3BCI Study L, checkerboard training files | 11 with ALS | checkerboard | 30 (one person 24) | 126 |
+
+`etsu_als` was recorded at a different site with different hardware and a different flashing pattern. Which
+cells flashed is read from the per-cell indicator channels; the target is `CurrentTarget`.
+
+**Methods** as before, generalised from row/column codes to "which cells lit up", plus
+`seeded_umm[<other dataset>]`: the seed comes from every participant of a *different* dataset, so nothing
+from the test participant's lab, hardware or (for `rome_healthy`) patient group is used.
+The supervised reference trains on the first 15 (`rome_als`), 6 (`rome_healthy`) or 12 (`etsu_als`) letters.
+
+**Preprocessing.** `binned` is the pipeline fixed in the first addendum and stays primary. `authors` copies
+the settings in the UMM authors' public demo: 0.5-8 Hz, resampled to 40 Hz, 0.05-0.7 s, every sample as a
+feature, no baseline correction. The authors' own algorithm file is not public (available on request only),
+so UMM remains a reimplementation of the paper's equations under both pipelines.
+
+**Questions and what counts as an answer**
+
+1. *Is the weak UMM baseline an artefact of my preprocessing?* Report `umm_memory` on `rome_als` under
+   `authors`. If it lands within 5 points of the published 77.86%, the reimplementation is taken as faithful.
+   Whatever it scores, seeded UMM is compared against it under the same pipeline.
+2. *Does the effect replicate in other people with ALS?* On `etsu_als`, `seeded_umm` (seed from the other
+   ten) must beat `umm_memory` on participant-mean accuracy.
+3. *Does seeding do harm where UMM already works?* On `rome_healthy`, `seeded_umm` must be no more than
+   3 points below `umm_memory`.
+4. *Can the seed come from elsewhere?* For `rome_als`: seed from `rome_healthy` (other patient group) and from
+   `etsu_als` (other site and paradigm). For `etsu_als`: seed from `rome_als`. Each counts as working if it
+   beats `umm_memory` and is within 5 points of the same-dataset seed.
+5. *Primary confirmatory test.* Across all 19 people with ALS (both sites), `seeded_umm` vs `umm_memory`,
+   all letters, all flashes, `binned` pipeline: exact two-sided sign-flip permutation test on participant
+   differences, alpha 0.05, with a participant-bootstrap 95% interval for the mean difference. This is the
+   one test the headline claim rests on. Everything else is reported with intervals and is secondary.
+
+**Statistics.** Participant is the unit. Intervals: 10,000-resample bootstrap over participants. Paired
+comparisons: exact sign-flip permutation (all 2^n assignments), plus Wilcoxon for continuity with the first
+addendum. No correction for multiple comparisons is applied to secondary results; they are labelled as such.
+
+**Known limits.** Still offline replays. `etsu_als` checkerboard training files only. The eight shared
+channels discard half of the electrodes available in two of the datasets. Seeds and seed weight are not tuned.
+
+**Deviation recorded before any addendum-2 result was seen (15 Nov 2026).** While loading the data, the
+healthy Rome files turned out to be stored at roughly seven times the amplitude of the ALS files, so a seed
+taken from one dataset would be in the wrong units for another. The seed is therefore stored unit-free (each
+contributing person divided by their own overall standard deviation) and rescaled by the standard deviation of
+the new user's own epochs seen so far. This needs no labels and no future data. It is applied to every seeded
+variant, including the same-dataset seed, so the `rome_als` figure can differ slightly from the first run
+(86.4%), which used raw units. A first launch of the addendum-2 run was stopped before finishing and its
+output was not looked at.

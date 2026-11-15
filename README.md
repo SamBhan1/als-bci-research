@@ -1,154 +1,144 @@
-# ALS BCI generalization baseline
+# Calibration-free P300 spelling for people with ALS
 
-Research code for cross-participant P300 EEG decoding aimed at assistive communication research. The repository contains no patient EEG files; download them only after reading the dataset terms in [DATA_NOTICE.md](DATA_NOTICE.md).
+Research code and results. No EEG recordings are stored here; scripts download them from their public
+sources. This is not a medical device and nothing here is evidence of clinical benefit
+([DATA_NOTICE.md](DATA_NOTICE.md)).
 
-Research question:
+## The question
 
-> Does an EEG classifier that looks strong on randomly mixed trials still work when tested on a person it never saw during training?
+A P300 speller lets a person pick letters with their brain response to flashes on a screen. Before it works,
+the person normally has to sit through a calibration session, copying known letters for several minutes so
+the decoder can learn their response. For someone with ALS that is tiring and has to be repeated.
 
-Read [LITERATURE_REVIEW.md](LITERATURE_REVIEW.md) for prior ALS/P300 work and [PROTOCOL.md](PROTOCOL.md) for the claim and splitting rules used here.
+UMM (Sosulski & Tangermann, 2023) is a published method that needs **no calibration**. It scores above 99%
+on healthy users. On people with ALS its authors report 77.86%, with some participants at 0%, and they explain
+why: after one early wrong guess, what the method remembers can point the wrong way, and every later letter
+inherits the mistake.
 
-This is a deliberately small first experiment for ALS assistive-communication research. It can run on synthetic EEG-like epochs for pipeline checks, or on real EDF+ EEG recordings from the public PhysioNet bigP3BCI dataset. The real loader extracts P300 target/non-target epochs from EEG and preserves participant IDs.
+**Does starting UMM's memory from other people's average brain response remove that failure, so that a new
+user with ALS needs no calibration?**
 
-The project is not a diagnostic or clinical tool. It is a reproducible benchmark scaffold. The public recordings are not a clinical validation set and must not be used to diagnose or treat anyone.
+## Answer in short
 
-## Main finding: calibration-free spelling that works for people with ALS
+Yes, if the other people were recorded on the same kind of setup. No, and it can do harm, if they were not.
 
-A P300 speller normally needs a calibration session before it can be used: the person copies known letters
-for several minutes so the decoder can learn their brain response. For someone with ALS that is tiring, and
-it has to be repeated. UMM (Sosulski & Tangermann, 2023) is a published method that needs no calibration at
-all. It scores above 99% on healthy users, but its authors report 77.86% on this ALS dataset, with some
-participants at 0%, and explain why: in a row/column speller, one early wrong guess can poison everything it
-remembers afterwards.
+Tested on 19 people with ALS from two labs and 10 healthy people. Exact-letter accuracy, chance is 2.8%.
+Brackets are 95% intervals over participants. Full tables: [RESULTS.md](RESULTS.md).
 
-This repository tests a small fix: start UMM's memory from the average brain response of **other** ALS
-patients instead of from nothing. The new user still provides no calibration and no labels.
+| All 19 people with ALS | Calibration from the user | Accuracy, all letters | Worst participant |
+|---|---|---:|---:|
+| Other people's data only, never adapting (`transfer`) | none | 58.7% (46.6-70.3) | 6.7% |
+| UMM with memory, reimplemented (`umm_memory`) | none | 61.1% (43.8-77.9) | 0.0% |
+| **Seeded UMM** (`seeded_umm`, seed from the same dataset) | **none** | **78.4%** (67.6-87.1) | 10.0% |
 
-Eight people with ALS, 35 letters each, 10 flash sequences per letter, exact-letter accuracy (chance is 2.8%):
+1. **Seeding helps people with ALS.** Seeded UMM beat UMM with memory by 17.3 points (95% CI +4.2 to +31.8;
+   exact permutation test p = 0.027). This was the one test named in advance as the test of the main claim.
+   It beat using other people's data without adapting by 19.7 points (p = 0.0001).
+2. **The gain comes from rescuing failures, not from lifting everyone.** 8 participants improved, 5 were
+   unchanged and 6 got slightly worse. UMM with memory left four people with ALS at 0-10%; seeded UMM left one.
+3. **After the calibration period it is on par with a calibrated decoder.** On the letters after a normal
+   calibration block, seeded UMM was 2.2 points below the calibrated decoder (95% CI -11.6 to +4.0). That
+   interval is too wide to call them equal; it does show no calibration was needed to get into the same range.
+4. **It replicated at a second site** (11 people with ALS, different lab, hardware and flashing pattern):
+   72.4% vs 62.1% for UMM with memory. Alone, that difference is not statistically significant (p = 0.20).
+5. **It does no harm where UMM already works.** On healthy users: 94.4% vs 91.7%.
+6. **The seed does not travel between setups. This is the main limit.** Seeding Rome's ALS users from Rome's
+   healthy users gave 73.9%, well short of the 86.8% from fellow patients. Seeding the second site's users
+   from Rome's data gave 30.1%, far *worse* than no seed at all (62.1%). A new clinic could not simply reuse
+   another lab's seed.
+7. **It needs enough flashes.** With 3 or fewer flash sequences per letter it is worse than `transfer`; from
+   5 sequences up it matches the calibrated decoder (Rome ALS data).
 
-| Method | Calibration needed from the user | All 35 letters | Worst participant | Letters 16-35 |
-|---|---|---:|---:|---:|
-| Supervised LDA (the usual way) | 15 letters | not usable for the first 15 | | 95.0% |
-| Transfer only (other 7 patients, no adapting) | none | 76.1% | 57.1% | 73.8% |
-| UMM, current letter only (reimplemented) | none | 38.9% | 14.3% | 40.6% |
-| UMM with memory (reimplemented) | none | 59.6% | **0.0%** (two participants) | 66.2% |
-| **Seeded UMM (this repository)** | **none** | **86.4%** (95% CI 82.5-90.0) | **77.1%** | **96.3%** |
+## Read this before quoting it
 
-- The failure the UMM authors described is reproduced (two participants at 0%), and seeding removes it: every
-  participant is at 77% or better.
-- After the first 15 letters, with no calibration, seeded UMM is as accurate as a decoder calibrated on those
-  15 letters (96.3% vs 95.0%). Both targets set in advance in [PROTOCOL.md](PROTOCOL.md) were met.
-- It beats either ingredient alone: other patients' data without adapting (76.1%) and adapting without other
-  patients' data (59.6%).
+- **UMM is reimplemented here from the paper's equations.** The authors' algorithm file is not public (it is
+  available from them on request and a patent is pending on UMM-based applications). With my preprocessing
+  the reimplementation scores 59.6% on the Rome ALS data; with the settings from the authors' public demo it
+  scores 69.6%; they report 77.86%. The target set in advance was to land within 5 points, and it did not. So
+  the baseline here is weaker than the published one. Seeded UMM scores 86.8% and 87.9% on that dataset under
+  the two pipelines, above the published figure too, but that comparison is across different code and
+  preprocessing and is not a controlled one.
+- **One participant at the second site is at about 10% under every calibration-free method**, and the
+  calibrated decoder is also weakest at that site (82.1%).
+- **19 people with ALS is still small**, and secondary comparisons are not corrected for multiple testing.
+- **Offline replay.** Recorded sessions were replayed letter by letter. No one used the speller live.
+- The seed is unit-free and its weight (five letters' worth) was fixed in advance, not tuned.
+- Rules for what would count as a result were written before each run: [PROTOCOL.md](PROTOCOL.md), both
+  addenda, including one deviation. Outcome against those rules:
 
-Read this before quoting it:
+| Set in advance | Outcome |
+|---|---|
+| Primary test: seeded UMM vs UMM with memory, 19 people with ALS, p < 0.05 | **Met** (p = 0.027) |
+| Reimplemented UMM within 5 points of the published 77.86% under the authors' settings | **Not met** (69.6%) |
+| Replicates at the second ALS site (higher mean than UMM with memory) | **Met** (72.4% vs 62.1%) |
+| No more than 3 points worse than UMM with memory on healthy users | **Met** (2.8 points better) |
+| Seed from another dataset beats UMM with memory and is within 5 points of the local seed | **Not met** in any of the three cases |
 
-- **Eight participants.** The paired tests are not statistically significant at this size (seeded vs UMM with
-  memory p = 0.20; vs transfer only p = 0.06; vs supervised p = 0.63). The intervals above are over participants.
-- **The UMM numbers are a reimplementation** from the paper's equations with this repository's preprocessing,
-  not the authors' code. It gives 59.6% where they report 77.86%, so the gain over *their* number is about
-  9 points, not 27.
-- **It needs enough flashes.** With 5 or fewer sequences per letter, seeded UMM is no better than transfer
-  only, and with 1-3 it is worse. See [RESULTS.md](RESULTS.md).
-- **On the first 15 letters** seeded UMM gets 73.3% while it is still adapting.
-- This is an offline replay of recorded sessions from one lab and one EEG setup. It is not a test with a
-  person using the speller live, and it is not evidence of clinical benefit.
+## Run it
 
-Reproduce it (about two minutes):
+Windows Command Prompt, from this folder. Python 3.10 or newer, about 800 MB of downloads, no paid services.
+The full run takes about ten minutes.
 
-```cmd
+```bash
+py -m venv .venv
+```
+
+```bash
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+```bash
 .venv\Scripts\python.exe download_nemar_source.py
+```
+
+```bash
+.venv\Scripts\python.exe download_bnci009.py
+```
+
+```bash
+.venv\Scripts\python.exe download_dataset.py
+```
+
+```bash
 .venv\Scripts\python.exe calibration_free.py
+```
+
+```bash
+.venv\Scripts\python.exe render_results.py
+```
+
+```bash
 .venv\Scripts\python.exe -m pytest -q
 ```
 
-## Run
+## What is in here
 
-From the project folder in Command Prompt:
+| File | What it does |
+|---|---|
+| `calibration_free.py` | Loads the three datasets, runs every method as an online replay, writes `results/calibration_free_results.json`. |
+| `render_results.py` | Turns that JSON into [RESULTS.md](RESULTS.md). |
+| `tests/` | Unit tests on synthetic spellers; no download needed. |
+| `download_*.py` | Fetch the three public datasets. |
+| [PROTOCOL.md](PROTOCOL.md) | What was fixed in advance, and deviations. |
+| [LITERATURE_REVIEW.md](LITERATURE_REVIEW.md) | Prior work and the gap. |
+| `exploratory/` | Earlier target-detection baselines. Not part of the result; see its README. |
 
-```powershell
-py -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe experiment.py
-```
+## Datasets
 
-Download a small Study L subset and run it:
+| Name in the code | Source | People | Flashing pattern |
+|---|---|---|---|
+| `rome_als` | [BNCI 2014-008](https://www.nemar.org/dataset/nm000169) (Riccio et al., 2013) | 8 with ALS | row/column |
+| `rome_healthy` | [BNCI 2014-009](https://bnci-horizon-2020.eu/database/data-sets) (Aricò et al., 2014) | 10 healthy | row/column |
+| `etsu_als` | [bigP3BCI](https://doi.org/10.13026/0byy-ry86) Study L, checkerboard training files | 11 with ALS | checkerboard |
 
-```cmd
-.venv\Scripts\python.exe download_dataset.py
-.venv\Scripts\python.exe experiment.py --data-dir data\raw
-```
+All are 6x6 spellers at 256 Hz, cut down to the eight electrodes they share.
 
-Run the advanced comparison with ten same-class epochs averaged into each example:
+## What would make this stronger
 
-```cmd
-.venv\Scripts\python.exe advanced_experiment.py --data-dir data\raw --repeats 10
-```
+- The authors' own UMM code, to replace the reimplemented baseline.
+- A live test, where the user sees feedback and the early, less accurate letters matter.
+- Finding out *why* the seed fails across setups (flash timing, amplifier filters, flashing pattern) and
+  whether aligning the recordings first repairs it.
+- More people with ALS; bigP3BCI has three further studies that include them.
 
-Save a paper-ready participant-disjoint benchmark as JSON:
-
-```cmd
-.venv\Scripts\python.exe benchmark.py --data-dir data\raw --repeats 10 --output benchmark_results.json
-```
-
-Download the independent ALS-only external-validation dataset and evaluate cross-dataset transfer:
-
-```cmd
-.venv\Scripts\python.exe download_nemar.py
-.venv\Scripts\python.exe external_validation.py --train-dir data\raw --test-dir data\nm000169 --repeats 10
-```
-
-For the actual spelling-level metric, download the source-format stimulus codes and run:
-
-```cmd
-.venv\Scripts\python.exe download_nemar_source.py
-.venv\Scripts\python.exe source_character_eval.py --source-dir data\nm000169\sourcedata --training-source calibration --calibration-fraction 0.6 --repeats 10 --model xdawn_lda
-```
-
-This evaluates exact row/column-pair selection per character using the source metadata. It is the appropriate communication-level metric; binary target detection should not be presented as spelling accuracy.
-
-Use `--model logistic` to compare the unaligned baseline. The default `riemann` model uses xDAWN covariance alignment before tangent-space classification.
-
-To measure a realistic short calibration phase, add for example `--calibration-fraction 0.2`. That uses the first 20% of each NEMAR participant's labeled epochs for adaptation and evaluates only on the remaining 80%; it is not zero-shot performance.
-
-Observed results on the downloaded data:
-
-- Study L participant-held-out: xDAWN covariance + Riemannian tangent space, 10-epoch averaging, balanced accuracy 0.703 and ROC-AUC 0.794.
-- Independent NEMAR ALS external test: zero-shot balanced accuracy 0.689 and ROC-AUC 0.757.
-- NEMAR ALS external test with 60% labeled calibration: participant-mean balanced accuracy 0.845 (95% bootstrap CI 0.811--0.878) and ROC-AUC 0.933 (95% CI 0.896--0.965).
-- NEMAR ALS external test with 80% labeled calibration: participant-mean balanced accuracy 0.871 (95% bootstrap CI 0.845--0.903).
-- NEMAR ALS external test with 90% labeled calibration: participant-mean balanced accuracy 0.882 (95% bootstrap CI 0.818--0.939), but only 10% of each participant remained for evaluation.
-- Corrected source-format spelling evaluation (re-run 15 Nov 2026 after fixing a one-sample letter-boundary error in `source_character_eval.py`): xDAWN + shrinkage LDA reached 0.911 at 80% calibration (56 held-out characters) and 0.969 at 90% calibration (32 held-out characters, exploratory). Before the fix these were reported as 0.844 and 0.906.
-
-The 80% calibration result is the strongest primary spelling result, but it still requires substantial labeled calibration. The 90% result uses a small held-out character set; it is exploratory and must not be presented as a general claim.
-
-The NEMAR event table does not include the stimulus identity/order needed to reconstruct row/column characters, so `character_validation.py` is retained as an exploratory diagnostic only and is not a valid communication-accuracy result. A true character-level study requires a dataset that preserves stimulus codes.
-
-Some PhysioNet files expose stimulus codes, but the encoding differs across Study L participants; the exploratory sequence decoder is therefore not used for a headline result until the codebook is verified per study.
-
-This comparison uses participant-disjoint validation, training-only class balancing, the preregistered 250--500 ms P300 window, xDAWN spatial filtering, shrinkage LDA, bootstrap confidence intervals, and a paired Wilcoxon test. The ten-epoch result is closer to a BCI decision unit than a single stimulus response; it must not be reported as single-epoch accuracy.
-
-The advanced script compares three appropriate models:
-
-- time-resolved logistic regression as a transparent baseline;
-- xDAWN spatial filtering plus shrinkage LDA;
-- xDAWN-enhanced covariance features plus a Riemannian tangent-space classifier.
-
-The last two are preferred for the current small, heterogeneous P300 dataset. A large transformer is not the default here because only 11 participants have been downloaded so far; it would make overfitting easier to hide.
-
-The NEMAR external set contains eight people with ALS, eight EEG channels, and a 6x6 P300 copy-spelling task. It is licensed CC-BY-NC-ND, so keep it for analysis and do not redistribute it or derivative files.
-
-The script prints accuracy, balanced accuracy, and macro F1 for:
-
-- a random trial split, which can leak subject-specific patterns;
-- leave-one-subject-out evaluation, which tests generalization to unseen people.
-
-The current real-data pipeline applies a 0.5--30 Hz EEG filter, subtracts the pre-stimulus baseline, and extracts time-resolved features from ten post-stimulus windows. On the downloaded Study L subset, the current unseen-participant baseline is balanced accuracy 0.596 and macro F1 0.515. These are research baselines, not clinical performance claims.
-
-## Research discipline
-
-- Split by participant before fitting preprocessing or models.
-- Report per-subject results, not only one average.
-- Compare calibration time and performance on unseen participants.
-- Treat this as a research result, not evidence for patient use.
-
+Code: MIT ([LICENSE](LICENSE)). Data licences differ by dataset; see [DATA_NOTICE.md](DATA_NOTICE.md).
