@@ -12,6 +12,56 @@ This is a deliberately small first experiment for ALS assistive-communication re
 
 The project is not a diagnostic or clinical tool. It is a reproducible benchmark scaffold. The public recordings are not a clinical validation set and must not be used to diagnose or treat anyone.
 
+## Main finding: calibration-free spelling that works for people with ALS
+
+A P300 speller normally needs a calibration session before it can be used: the person copies known letters
+for several minutes so the decoder can learn their brain response. For someone with ALS that is tiring, and
+it has to be repeated. UMM (Sosulski & Tangermann, 2023) is a published method that needs no calibration at
+all. It scores above 99% on healthy users, but its authors report 77.86% on this ALS dataset, with some
+participants at 0%, and explain why: in a row/column speller, one early wrong guess can poison everything it
+remembers afterwards.
+
+This repository tests a small fix: start UMM's memory from the average brain response of **other** ALS
+patients instead of from nothing. The new user still provides no calibration and no labels.
+
+Eight people with ALS, 35 letters each, 10 flash sequences per letter, exact-letter accuracy (chance is 2.8%):
+
+| Method | Calibration needed from the user | All 35 letters | Worst participant | Letters 16-35 |
+|---|---|---:|---:|---:|
+| Supervised LDA (the usual way) | 15 letters | not usable for the first 15 | | 95.0% |
+| Transfer only (other 7 patients, no adapting) | none | 76.1% | 57.1% | 73.8% |
+| UMM, current letter only (reimplemented) | none | 38.9% | 14.3% | 40.6% |
+| UMM with memory (reimplemented) | none | 59.6% | **0.0%** (two participants) | 66.2% |
+| **Seeded UMM (this repository)** | **none** | **86.4%** (95% CI 82.5-90.0) | **77.1%** | **96.3%** |
+
+- The failure the UMM authors described is reproduced (two participants at 0%), and seeding removes it: every
+  participant is at 77% or better.
+- After the first 15 letters, with no calibration, seeded UMM is as accurate as a decoder calibrated on those
+  15 letters (96.3% vs 95.0%). Both targets set in advance in [PROTOCOL.md](PROTOCOL.md) were met.
+- It beats either ingredient alone: other patients' data without adapting (76.1%) and adapting without other
+  patients' data (59.6%).
+
+Read this before quoting it:
+
+- **Eight participants.** The paired tests are not statistically significant at this size (seeded vs UMM with
+  memory p = 0.20; vs transfer only p = 0.06; vs supervised p = 0.63). The intervals above are over participants.
+- **The UMM numbers are a reimplementation** from the paper's equations with this repository's preprocessing,
+  not the authors' code. It gives 59.6% where they report 77.86%, so the gain over *their* number is about
+  9 points, not 27.
+- **It needs enough flashes.** With 5 or fewer sequences per letter, seeded UMM is no better than transfer
+  only, and with 1-3 it is worse. See [RESULTS.md](RESULTS.md).
+- **On the first 15 letters** seeded UMM gets 73.3% while it is still adapting.
+- This is an offline replay of recorded sessions from one lab and one EEG setup. It is not a test with a
+  person using the speller live, and it is not evidence of clinical benefit.
+
+Reproduce it (about two minutes):
+
+```cmd
+.venv\Scripts\python.exe download_nemar_source.py
+.venv\Scripts\python.exe calibration_free.py
+.venv\Scripts\python.exe -m pytest -q
+```
+
 ## Run
 
 From the project folder in Command Prompt:
@@ -68,9 +118,9 @@ Observed results on the downloaded data:
 - NEMAR ALS external test with 60% labeled calibration: participant-mean balanced accuracy 0.845 (95% bootstrap CI 0.811--0.878) and ROC-AUC 0.933 (95% CI 0.896--0.965).
 - NEMAR ALS external test with 80% labeled calibration: participant-mean balanced accuracy 0.871 (95% bootstrap CI 0.845--0.903).
 - NEMAR ALS external test with 90% labeled calibration: participant-mean balanced accuracy 0.882 (95% bootstrap CI 0.818--0.939), but only 10% of each participant remained for evaluation.
-- Corrected source-format spelling evaluation: xDAWN + shrinkage LDA reached 0.844 at 80% calibration and 0.906 at 90% calibration; the latter used only 32 held-out characters and is exploratory.
+- Corrected source-format spelling evaluation (re-run 15 Nov 2026 after fixing a one-sample letter-boundary error in `source_character_eval.py`): xDAWN + shrinkage LDA reached 0.911 at 80% calibration (56 held-out characters) and 0.969 at 90% calibration (32 held-out characters, exploratory). Before the fix these were reported as 0.844 and 0.906.
 
-The 80% calibration result is the strongest primary spelling result, but it still requires substantial labeled calibration. The 90% result crosses 90% on the small held-out character set, but is exploratory and must not be presented as a general 90% claim.
+The 80% calibration result is the strongest primary spelling result, but it still requires substantial labeled calibration. The 90% result uses a small held-out character set; it is exploratory and must not be presented as a general claim.
 
 The NEMAR event table does not include the stimulus identity/order needed to reconstruct row/column characters, so `character_validation.py` is retained as an exploratory diagnostic only and is not a valid communication-accuracy result. A true character-level study requires a dataset that preserves stimulus codes.
 

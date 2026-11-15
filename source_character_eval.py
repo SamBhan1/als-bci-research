@@ -45,7 +45,7 @@ def load_source(data_dir: Path) -> SourceData:
             ys.append(int(labels[start] == 2))
             subjects.append(path.stem)
             codes.append(int(stimulus[start]))
-            trials.append(int(np.searchsorted(np.asarray(source.trial), start, side="right") - 1))
+            trials.append(int(np.searchsorted(np.asarray(source.trial) - 1, start, side="right") - 1))
     return SourceData(np.asarray(xs), np.asarray(ys), np.asarray(subjects), np.asarray(codes), np.asarray(trials))
 
 

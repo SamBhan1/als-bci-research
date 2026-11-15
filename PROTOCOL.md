@@ -45,3 +45,41 @@ Run 0%, 20%, 60%, and 80% labeled calibration as the primary curve. A 90% condit
 
 These experiments do not establish diagnosis, treatment benefit, clinical safety, communication usability, or regulatory approval. A true patient-facing study requires clinical collaborators, ethics review, prospective data collection, and a pre-specified safety and usability protocol.
 
+
+## Addendum (15 Nov 2026): calibration-free spelling
+
+Written before `calibration_free.py` was run on any data.
+
+**Question.** UMM (Sosulski & Tangermann 2023) decodes ERP spellers with no calibration and reports over 99%
+on healthy users but 77.86% on this ALS dataset, with some participants at 0% when it learns from earlier
+letters. The authors' explanation: in a row-column speller, one early wrong decision can leave the remembered
+class means pointing the wrong way, and every later letter inherits it. Does starting that memory from other
+ALS patients' average responses remove the failure, with no calibration from the new user?
+
+**Data.** The eight ALS participants of BNCI 2014-008, source files, 35 letters each, 10 sequences of 12
+flashes per letter.
+
+**Fixed in advance (not tuned):** 0.5-16 Hz band-pass; 0-800 ms after each flash; baseline -100-0 ms; mean
+of 50 ms bins on 8 channels (128 features); Ledoit-Wolf shrinkage covariance; seed weight equal to five
+confident letters; supervised reference trained on the participant's first 15 letters.
+
+**Methods.** `supervised`, `transfer` (other seven patients, no adaptation), `umm`, `umm_memory`,
+`seeded_umm`, as described at the top of `calibration_free.py`. For a held-out participant, everything
+learned from other people uses the other seven only. No label of the held-out participant is used by any
+calibration-free method.
+
+**Primary outcome.** Participant-mean exact-letter accuracy (chance 1/36) over all 35 letters with 10
+sequences; bootstrap 95% interval over participants; lowest participant; paired Wilcoxon signed-rank tests
+(n = 8, so low power: a non-significant p is not evidence of no difference).
+
+**Secondary.** The same with 1, 2, 3, 5 and 7 sequences; accuracy on the last 20 letters next to the
+supervised reference; accuracy on the first 15 letters, when a calibrated system is still unusable.
+
+**What would count as a result.** The seeding "fixes the failure" if `seeded_umm` beats `umm_memory` on the
+primary outcome and no participant is under 50%. It "removes the need for calibration" only if, on the last
+20 letters, its participant mean is within 5 points of `supervised`. Whatever happens is reported, including
+if plain `transfer` does as well as `seeded_umm`, which would mean the UMM part adds nothing.
+
+**Limits known in advance.** Eight participants. Offline simulation of online use. The reimplementation of
+UMM follows the paper's equations but is not the authors' code or preprocessing, so it need not reproduce
+77.86% exactly. The seed comes from the same recording setup and site; transfer across hardware is untested.

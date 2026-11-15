@@ -3,3 +3,4 @@ numpy==2.4.6
 scipy==1.17.1
 scikit-learn==1.9.1
 pyriemann==0.12
+pytest==9.2.0

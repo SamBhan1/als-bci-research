@@ -38,3 +38,26 @@ The important gaps are:
 - Lawhern et al., “EEGNet: A compact convolutional neural network for EEG-based brain-computer interfaces,” https://doi.org/10.1088/1741-2552/aace8c
 - Mainsah et al., “bigP3BCI: An Open, Diverse and Machine Learning Ready P300-based Brain-Computer Interface Dataset,” https://doi.org/10.13026/0byy-ry86
 
+## Calibration-free spelling (added 15 Nov 2026)
+
+- **Kindermans et al. (2014)** combined transfer learning between users, unsupervised adaptation, a language
+  model and dynamic stopping into a zero-training speller, tested in simulation on 22 healthy-user recordings.
+  https://doi.org/10.1088/1741-2560/11/3/035005
+- **Mainsah et al. (2015)** showed online, with ALS participants, that dynamic stopping raises communication
+  rate while keeping accuracy; the decoder was still calibrated. https://pmc.ncbi.nlm.nih.gov/articles/PMC4631027
+- **UMM (Sosulski & Tangermann, 2023)** needs no calibration and no other users' data: for each candidate
+  symbol it computes the target-minus-non-target mean difference that symbol would imply and picks the largest
+  covariance-corrected distance. It reports above 99% on healthy-user visual spellers and 77.86% on the ALS
+  dataset used here (Riccio et al., 2013), with some participants at 0% when it learns from earlier letters.
+  The authors attribute this to the row/column layout: after an early wrong decision the remembered means can
+  point the wrong way, and a distance cannot see direction. https://arxiv.org/abs/2306.11830
+  (demo code: https://github.com/jsosulski/umm_demo)
+- **Riccio et al. (2013)** recorded the dataset: eight people with ALS, 8 channels, 6x6 row/column speller,
+  35 letters each. https://doi.org/10.3389/fnhum.2013.00732
+
+**The gap.** The method that removes calibration fails for exactly the users who most need calibration
+removed. No public repository was found (web and GitHub search, 14-15 Nov 2026) that evaluates
+calibration-free spelling on ALS data against a calibrated baseline letter by letter, or that tests whether
+other patients' data repairs UMM's row/column failure. `calibration_free.py` does both. The idea of seeding
+from other users is Kindermans et al.'s; what is new here is applying it to UMM's memory and measuring it on
+people with ALS.
