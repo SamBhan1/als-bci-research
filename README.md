@@ -6,6 +6,8 @@ Research question:
 
 > Does an EEG classifier that looks strong on randomly mixed trials still work when tested on a person it never saw during training?
 
+Read [LITERATURE_REVIEW.md](LITERATURE_REVIEW.md) for prior ALS/P300 work and [PROTOCOL.md](PROTOCOL.md) for the claim and splitting rules used here.
+
 This is a deliberately small first experiment for ALS assistive-communication research. It can run on synthetic EEG-like epochs for pipeline checks, or on real EDF+ EEG recordings from the public PhysioNet bigP3BCI dataset. The real loader extracts P300 target/non-target epochs from EEG and preserves participant IDs.
 
 The project is not a diagnostic or clinical tool. It is a reproducible benchmark scaffold. The public recordings are not a clinical validation set and must not be used to diagnose or treat anyone.
@@ -15,27 +17,35 @@ The project is not a diagnostic or clinical tool. It is a reproducible benchmark
 From the project folder in Command Prompt:
 
 ```powershell
-.venv\Scripts\python.exe als_bci_baseline\experiment.py
+py -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe experiment.py
 ```
 
 Download a small Study L subset and run it:
 
 ```cmd
-.venv\Scripts\python.exe als_bci_baseline\download_dataset.py
-.venv\Scripts\python.exe als_bci_baseline\experiment.py --data-dir als_bci_baseline\data\raw
+.venv\Scripts\python.exe download_dataset.py
+.venv\Scripts\python.exe experiment.py --data-dir data\raw
 ```
 
 Run the advanced comparison with ten same-class epochs averaged into each example:
 
 ```cmd
-.venv\Scripts\python.exe als_bci_baseline\advanced_experiment.py --data-dir als_bci_baseline\data\raw --repeats 10
+.venv\Scripts\python.exe advanced_experiment.py --data-dir data\raw --repeats 10
+```
+
+Save a paper-ready participant-disjoint benchmark as JSON:
+
+```cmd
+.venv\Scripts\python.exe benchmark.py --data-dir data\raw --repeats 10 --output benchmark_results.json
 ```
 
 Download the independent ALS-only external-validation dataset and evaluate cross-dataset transfer:
 
 ```cmd
-.venv\Scripts\python.exe als_bci_baseline\download_nemar.py
-.venv\Scripts\python.exe als_bci_baseline\external_validation.py --train-dir als_bci_baseline\data\raw --test-dir als_bci_baseline\data\nm000169 --repeats 10
+.venv\Scripts\python.exe download_nemar.py
+.venv\Scripts\python.exe external_validation.py --train-dir data\raw --test-dir data\nm000169 --repeats 10
 ```
 
 Use `--model logistic` to compare the unaligned baseline. The default `riemann` model uses xDAWN covariance alignment before tangent-space classification.

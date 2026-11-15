@@ -10,4 +10,5 @@ data/
 matplotlib-cache/
 tmp-mpl/
 .env
+benchmark_results.json
 
