@@ -33,7 +33,7 @@ The important gaps are:
 
 - Nijboer et al., “A P300-based brain-computer interface for people with amyotrophic lateral sclerosis,” https://doi.org/10.1016/j.clinph.2008.03.034
 - Sellers et al., “Brain-computer interface (BCI) evaluation in people with amyotrophic lateral sclerosis,” https://pubmed.ncbi.nlm.nih.gov/24555843/
-- McCane et al., “An exploration of BCI performance variations in people with amyotrophic lateral sclerosis using longitudinal EEG data,” https://pmc.ncbi.nlm.nih.gov/articles/PMC7951329/
+- Shahriari et al., “An exploration of BCI performance variations in people with amyotrophic lateral sclerosis using longitudinal EEG data,” https://pmc.ncbi.nlm.nih.gov/articles/PMC7951329/
 - Li et al., “Transfer Learning Algorithm of P300-EEG Signal Based on XDAWN Spatial Filter and Riemannian Geometry Classifier,” https://doi.org/10.3390/app10051804
 - Lawhern et al., “EEGNet: A compact convolutional neural network for EEG-based brain-computer interfaces,” https://doi.org/10.1088/1741-2552/aace8c
 - Mainsah et al., “bigP3BCI: An Open, Diverse and Machine Learning Ready P300-based Brain-Computer Interface Dataset,” https://doi.org/10.13026/0byy-ry86
