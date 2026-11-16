@@ -20,7 +20,19 @@ user with ALS needs no calibration?**
 
 ## Answer in short
 
-Yes, if the other people were recorded on the same kind of setup. No, and it can do harm, if they were not.
+**Probably a little, but less than the first results suggested, and only with a seed from the same setup.**
+
+- On the first 19 people with ALS the gain was large and significant (+17.3 points, p = 0.027).
+- On **27 new people with ALS**, tested afterwards under a plan written in advance, the gain shrank to
+  +6.1 points and was **not significant** (p = 0.21). The independent replication failed. See
+  [EXPANSION_STUDY.md](EXPANSION_STUDY.md).
+- Pooled over all 46 people with ALS it is +10.8 points (p = 0.011), but that pool includes the people the
+  method was developed on, so it is not independent evidence.
+- What did hold up: the seed needs other users of the **same recording setup** (it travels within one lab,
+  almost never between labs), and it needs about **12** of them; a seed from fewer than about 8 people is
+  worse than no seed.
+
+The rest of this section is the original 19-person study, kept as it was run.
 
 Tested on 19 people with ALS from two labs and 10 healthy people. Exact-letter accuracy, chance is 2.8%.
 Brackets are 95% intervals over participants. Full tables: [RESULTS.md](RESULTS.md).
@@ -78,6 +90,9 @@ Brackets are 95% intervals over participants. Full tables: [RESULTS.md](RESULTS.
 | Seed from another dataset beats UMM with memory and is within 5 points of the local seed | **Not met** in any of the three cases |
 | Timing-corrected seed from the other ALS site beats UMM with memory (19 people, p < 0.05) | **Not met**: 20.5 points *worse* (p = 0.014) |
 | Timing correction costs no more than 3 points with a local seed | **Not met** (7.8 to 32.7 points worse) |
+| **Independent replication: seeded UMM beats UMM with memory on 27 new people with ALS, p < 0.05** | **Not met** (+6.1 points, p = 0.21) |
+| Seeds travel within one lab but not between labs | **Supported** (4 of 6 pairs vs 1 of 10) |
+| Background-adjusted similarity predicts which borrowed seeds help | **Not met** (rho 0.14) |
 
 ## Run it
 
@@ -114,6 +129,16 @@ Run the exploratory cross-site alignment and confidence-stopping extension:
 .venv\Scripts\python.exe adaptive_study.py --data-dir data --thresholds 1.0 --min-sequences 2
 ```
 
+Run the expansion study (27 more people with ALS; about 1.2 GB more to download):
+
+```bash
+.venv\Scripts\python.exe download_bigp3bci_more.py
+```
+
+```bash
+.venv\Scripts\python.exe expansion_study.py
+```
+
 Run the timing-correction study and the UMM fidelity grid:
 
 ```bash
@@ -140,6 +165,7 @@ To verify that the checked-in report still matches the JSON (the same check runs
 |---|---|
 | `calibration_free.py` | Loads the three datasets, runs every method as an online replay, writes `results/calibration_free_results.json`. |
 | `adaptive_study.py` | Exploratory CORAL seed alignment and confidence-based stopping; see [ADAPTIVE_STUDY.md](ADAPTIVE_STUDY.md). |
+| `expansion_study.py` | 27 more people with ALS, seed-size curve, which seeds travel; see [EXPANSION_STUDY.md](EXPANSION_STUDY.md). |
 | `latency_study.py` | Pre-specified timing correction for borrowed seeds (failed) and a UMM fidelity grid; see [LATENCY_STUDY.md](LATENCY_STUDY.md). |
 | `docs/umm_code_request.md` | Draft email asking the UMM authors for their implementation. Not sent. |
 | `render_results.py` | Turns that JSON into [RESULTS.md](RESULTS.md), or checks it with `--check`. |
@@ -156,6 +182,8 @@ To verify that the checked-in report still matches the JSON (the same check runs
 | `rome_als` | [BNCI 2014-008](https://www.nemar.org/dataset/nm000169) (Riccio et al., 2013) | 8 with ALS | row/column |
 | `rome_healthy` | [BNCI 2014-009](https://bnci-horizon-2020.eu/database/data-sets) (Aricò et al., 2014) | 10 healthy | row/column |
 | `etsu_als` | [bigP3BCI](https://doi.org/10.13026/0byy-ry86) Study L, checkerboard training files | 11 with ALS | checkerboard |
+| `etsu_b` | bigP3BCI Study B, first session, training files | 19 with ALS | checkerboard |
+| `etsu_n_wet`, `etsu_n_dry` | bigP3BCI Study N, training files, wet and dry caps | the same 8 with ALS | checkerboard |
 
 All are 6x6 spellers at 256 Hz, cut down to the eight electrodes they share.
 
@@ -165,7 +193,9 @@ All are 6x6 spellers at 256 Hz, cut down to the eight electrodes they share.
 - A live test, where the user sees feedback and the early, less accurate letters matter.
 - Finding out *why* the seed fails across setups. A plain time shift is ruled out and CORAL is not enough;
   the shape of the response relative to each setup's background EEG is the next thing to examine.
-- How few local, labelled earlier users are enough to build a working seed for a new setup.
-- More people with ALS; bigP3BCI has three further studies that include them.
+- An independent replication at a *different* lab, now that the 27-person replication within one lab was
+  not significant. Seeds from about 12 earlier users of that lab's own setup.
+- Why plain UMM with memory works well for some groups (Study B: 77%) and collapses for others (Rome ALS:
+  60%). That decides how much a seed can add.
 
 Code: MIT ([LICENSE](LICENSE)). Data licences differ by dataset; see [DATA_NOTICE.md](DATA_NOTICE.md).

@@ -4,7 +4,7 @@ This repository contains code and documentation only. Raw EEG files are intentio
 
 The experiments use public datasets downloaded by the included scripts:
 
-- PhysioNet bigP3BCI: https://www.physionet.org/content/bigp3bci/1.0.0/
+- PhysioNet bigP3BCI (Studies L, B and N; CC BY 4.0): https://www.physionet.org/content/bigp3bci/1.0.0/
 - NEMAR BNCI 2014-008 ALS P300: https://www.nemar.org/dataset/nm000169
 - BNCI 2014-009 (ten healthy users, same lab as 2014-008): https://bnci-horizon-2020.eu/database/data-sets
 
